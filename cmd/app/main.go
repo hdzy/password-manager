@@ -2,11 +2,12 @@ package main
 
 import (
 	"github.com/nsf/termbox-go"
+	"strconv"
 	"time"
 )
 
 func main() {
-	value := 10
+	value := 100
 	err := termbox.Init()
 	if err != nil {
 		panic(err)
@@ -16,15 +17,17 @@ func main() {
 	//termbox.SetInputMode(termbox.InputEsc)
 
 	termbox.SetCell(0, 0, rune(value), 0, termbox.ColorBlue)
-	termbox.Flush()
-	//termbox.PollEvent()
 
 	//loop:
 	for {
 		if ev := termbox.PollEvent(); ev.Type == termbox.EventKey {
 			value++
-			termbox.SetCell(0, 0, rune(value), 0, termbox.ColorBlue)
-			termbox.Sync()
+			strValue := strconv.Itoa(value)
+			//termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
+			//fmt.Println(byteValue)
+			for i := 0; i < len(strValue); i++ {
+				termbox.SetCell(i, 0, rune(strValue[i]), 0, termbox.ColorBlue)
+			}
 			termbox.Flush()
 		}
 	}
