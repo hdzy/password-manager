@@ -1,9 +1,7 @@
 package main
 
-import (
-	"password-manager/pkg/console"
-)
+import "password-manager/pkg/console"
 
 func main() {
-	console.Start()
+	console.Init()
 }
