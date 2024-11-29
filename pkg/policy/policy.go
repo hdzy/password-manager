@@ -1,16 +1,16 @@
 package policy
 
 import (
-	"encoding/json"
+	"bytes"
+	"encoding/gob"
 	"errors"
-	"io"
 	"os"
 	"path/filepath"
 	"reflect"
 )
 
 const (
-	filePath = "/files/policies.json"
+	filePath = "/files/policies.dat"
 )
 
 var (
@@ -21,16 +21,16 @@ var (
 )
 
 type Policy struct {
-	Name           string ` json:"name"`
-	Symbols        []rune `json:"symbols"`
-	MinimumNumbers int    `json:"minimum_numbers"`
-	MinTopRegister int    `json:"min_top_register"`
-	MinBotRegister int    `json:"min_bot_register"`
-	MinSpec        int    `json:"min_spec"`
-	MinNumbers     int    `json:"min_numbers"`
-	CharProc       int    `json:"char_proc"`
-	NumbProc       int    `json:"numb_proc"`
-	SpecProc       int    `json:"spec_proc"`
+	Name           string `json:"name" print:"Название:"`
+	Symbols        []rune `json:"symbols" print:"Доступные символы:"`
+	MinimumNumbers int    `json:"minimum_numbers" print:"Минимальное количество цифр:"`
+	MinTopRegister int    `json:"min_top_register" print:"Минимальное количество верхнего регистра:"`
+	MinBotRegister int    `json:"min_bot_register" print:"Минимальное количество нижнего регистра:"`
+	MinSpec        int    `json:"min_spec" print:"Минимальное количество спецсимволов:"`
+	MinNumbers     int    `json:"min_numbers" print:"Минимальное количество цифр:"`
+	CharProc       int    `json:"char_proc" print:"Процент символов:"`
+	NumbProc       int    `json:"numb_proc" print:"Процент цифр:"`
+	SpecProc       int    `json:"spec_proc" print:"Процент спецсимволов:"`
 }
 
 // Fvm - FieldValueMap for change fields in policy struct
@@ -86,8 +86,12 @@ func (p *Policies) openFile(flags int) (*os.File, error) {
 	fullPath := filepath.Join(projectDir, filePath)
 
 	file, err := os.OpenFile(fullPath, flags, 0644)
-
-	// TODO: create file with [] if it not exist
+	if os.IsNotExist(err) {
+		file, err = os.Create(fullPath)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	if err != nil {
 		return nil, err
@@ -99,21 +103,19 @@ func (p *Policies) openFile(flags int) (*os.File, error) {
 // Load JSON data from file
 func (p *Policies) Load() error {
 	file, err := p.openFile(os.O_RDONLY)
-
 	if err != nil {
 		return err
 	}
-
 	defer file.Close()
 
-	data, err := io.ReadAll(file)
-
+	var buffer bytes.Buffer
+	_, err = buffer.ReadFrom(file)
 	if err != nil {
 		return err
 	}
 
-	err = json.Unmarshal(data, &p)
-
+	decoder := gob.NewDecoder(&buffer)
+	err = decoder.Decode(p)
 	if err != nil {
 		return err
 	}
@@ -124,19 +126,19 @@ func (p *Policies) Load() error {
 // Save JSON data to file
 func (p *Policies) Save() error {
 	file, err := p.openFile(os.O_WRONLY | os.O_TRUNC)
-
 	if err != nil {
 		return err
 	}
-
 	defer file.Close()
 
-	saveData, err := json.MarshalIndent(p, "", "  ") // "" - без префикса, "  " - отступ в два пробела
+	var buffer bytes.Buffer
+	encoder := gob.NewEncoder(&buffer)
+	err = encoder.Encode(p)
 	if err != nil {
 		return err
 	}
 
-	_, err = file.Write(saveData)
+	_, err = file.Write(buffer.Bytes())
 	if err != nil {
 		return err
 	}

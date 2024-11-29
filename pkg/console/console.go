@@ -2,10 +2,11 @@ package console
 
 import (
 	"fmt"
+	"github.com/mattn/go-runewidth"
 	"github.com/nsf/termbox-go"
 	"os"
-	"strings"
-	"time"
+	"password-manager/pkg/policy"
+	"reflect"
 )
 
 type (
@@ -17,6 +18,8 @@ const (
 	next
 )
 
+var policies = policy.Policies{}
+
 func Init() {
 	if err := termbox.Init(); err != nil {
 		fmt.Println("Ошибка инициализации termbox:", err)
@@ -24,18 +27,20 @@ func Init() {
 	}
 	defer termbox.Close()
 
+	policies.Load()
+
 	if startMenu() == -1 {
 		return
 	}
 
-	<-time.NewTimer(10 * time.Second).C
+	termbox.PollEvent()
 }
 
 func startMenu() int {
 	menuItems := []string{"Управление парольными политиками", "Управление паролями"}
 	currentItem := 0
 
-	switch pickedValue := initMenu(menuItems, currentItem); pickedValue {
+	switch pickedValue := initMenu(menuItems, currentItem, "Главное меню"); pickedValue {
 	case 0:
 		if policyMenu() == -1 {
 			return startMenu()
@@ -58,25 +63,77 @@ func policyMenu() int {
 	menuItems := []string{"Посмотреть все парольные политики", "Создать новую парольную политику"}
 	currentItem := 0
 
-	pickedValue := initMenu(menuItems, currentItem)
-
-	if pickedValue == -1 {
+	switch pickedValue := initMenu(menuItems, currentItem, "Меню управления парольными политиками"); pickedValue {
+	case -1:
 		return -1
+	case 0:
+		if showAllPolicies() == -1 {
+			return policyMenu()
+		}
 	}
 
 	ClearTerminal()
 	RefreshTerminal()
 
-	fmt.Println("Выбранный пункт:", pickedValue+1)
-
 	return 1
+}
+
+func showAllPolicies() int {
+	menuItems := make([]string, len(policies))
+
+	for i, el := range policies {
+		menuItems[i] = el.Name
+	}
+
+	pickedValue := initMenu(menuItems, 0, "Парольные политики (выберите для редактирования):")
+	pickedPolicy := policies[pickedValue]
+
+	if editPolicy(pickedPolicy) == -1 {
+		return showAllPolicies()
+	}
+
+	return 0
+}
+
+func editPolicy(p *policy.Policy) int {
+	ClearTerminal()
+	RefreshTerminal()
+	printItem(p.Name, termbox.ColorGreen, termbox.ColorBlack, 0)
+
+	t := reflect.TypeOf(p).Elem()
+	v := reflect.ValueOf(p).Elem()
+
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		tag := field.Tag.Get("print")
+		var value interface{}
+
+		if v.Field(i).Kind() == reflect.Slice && v.Field(i).Type().Elem().Kind() == reflect.Int32 {
+			runes := v.Field(i).Interface().([]rune)
+			value = ""
+			for _, ch := range runes {
+				value = value.(string) + string(ch)
+			}
+		} else {
+			value = v.Field(i).Interface()
+		}
+
+		printItem(fmt.Sprintf("%s %v", tag, value), termbox.ColorWhite, termbox.ColorDefault, i+2)
+	}
+
+	RefreshTerminal()
+
+	// Wait for a key press before returning
+	termbox.PollEvent()
+
+	return 0
 }
 
 func passwordMenu() int {
 	menuItems := []string{"Посмотреть все пароли", "Создать новый пароль"}
 	currentItem := 0
 
-	pickedValue := initMenu(menuItems, currentItem)
+	pickedValue := initMenu(menuItems, currentItem, "Управление паролями")
 
 	if pickedValue == -1 {
 		return -1
@@ -90,13 +147,14 @@ func passwordMenu() int {
 	return 1
 }
 
-func initMenu(menuItems []string, currentItem int) int {
+func initMenu(menuItems []string, currentItem int, title string) int {
 	maxIndex := len(menuItems) - 1
 	minIndex := 0
 
 	render := func() {
+		printItem(title, termbox.ColorGreen, termbox.ColorBlack, 0)
 		for i, item := range menuItems {
-			y := i * 2
+			y := i + 2
 			if i == currentItem {
 				printItem(item, termbox.ColorBlack, termbox.ColorWhite, y)
 			} else {
@@ -152,9 +210,10 @@ func RefreshTerminal() {
 
 // Функция для вывода строки целиком
 func printItem(text string, fg, bg termbox.Attribute, y int) {
-	// Отображаем всю строку целиком
-	text = strings.ReplaceAll(text, " ", "  ")
-	for x, ch := range text {
-		termbox.SetCell(x/2, y, ch, fg, bg)
+	x := 0
+
+	for _, ch := range text {
+		termbox.SetCell(x, y, ch, fg, bg)
+		x += runewidth.RuneWidth(ch)
 	}
 }

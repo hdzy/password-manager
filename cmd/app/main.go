@@ -1,40 +1,37 @@
 package main
 
-import (
-	"fmt"
-	"password-manager/pkg/policy"
-)
+import "password-manager/pkg/console"
 
 func main() {
-	//console.Init()
+	console.Init()
 
-	var policies = policy.Policies{}
-
-	err := policies.Load()
-
-	newPolicy := policy.NewPolicy(
-		"Example",
-		[]rune{'a', 'b', 'c'},
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-	)
-
-	policies.New(newPolicy)
-
-	changeTo := make(policy.Fvm)
+	//var policies = policy.Policies{}
 	//
-	changeTo["MinimumNumbers"] = 10
+	//policies.Load()
 	//
-	err = policies.UpdateByName("Example", changeTo)
+	//newPolicy := policy.NewPolicy(
+	//	"Example2532",
+	//	[]rune{'a', 'b', 'c'},
+	//	0,
+	//	0,
+	//	0,
+	//	0,
+	//	0,
+	//	0,
+	//	0,
+	//	0,
+	//)
+	//
+	//policies.New(newPolicy)
 
-	policies.Save()
+	//changeTo := make(policy.Fvm)
+	//
+	//changeTo["MinimumNumbers"] = 10
+	//
+	//err = policies.UpdateByName("Example", changeTo)
 
-	fmt.Println(err)
+	//policies.Save()
+
+	//fmt.Println(err)
 
 }
