@@ -1,0 +1,7 @@
+# .air.toml
+[build]
+cmd = "go build -o main.exe ./cmd/app/main.go"
+watch_dir = ["./pkg", "./cmd"]
+include_ext = ["go", "tpl", "tmpl", "html"]
+exclude_dir = ["./tmp", "./vendor"]
+exclude_file = ["air.toml"]

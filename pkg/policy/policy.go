@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	filePath = "/files/policies.dat"
+	filePath = "files/policies.dat"
 )
 
 var (
@@ -158,7 +158,8 @@ func (p *Policies) UpdateByName(name string, fvm Fvm) error {
 			if err != nil {
 				return err
 			}
-			return nil
+			err = p.Save()
+			return err
 		}
 	}
 
